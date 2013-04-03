@@ -53,35 +53,46 @@ def needle_in_haystack(needle,haystack) :
         return True
     return False
 
-dash_titles = bulklib.load_dash_titles()
+def main() :
+    dash_titles = bulklib.load_dash_titles()
+    path = sys.argv[1]
+    process_batch_dir(path,dash_titles)
 
-path = sys.argv[1]
-batch_dir = os.listdir(path)
-for item_dir in batch_dir :
-    for item_file in os.listdir(path + "/" + item_dir) : 
-        item_path =  path + "/" + item_dir + "/" + item_file
-        if item_file == 'dublin_core.xml' :
-            print("Checking file: " + item_path)
-            dc_tree = etree.parse(item_path)
-            print("XML is well formed.")
-            root = dc_tree.getroot()
-            title = extract_title(dc_tree)
-            print("Title is: '" + str(title) + "'")
-            if needle_in_haystack(title,dash_titles) :
-                print("ALERT: SIMILAR TITLE ALREADY IN DASH!")
-                #exit()
-            else :
-                print ("New title...")
-        elif item_file == 'metadata_dash.xml' :
-            ''' sanity check dash metadata file '''
-            print("Checking file: " + item_path)
-            dc_tree = etree.parse(item_path)
-            print("XML is well formed.")
-        elif item_file == 'metadata_thesis.xml' :
-            ''' sanity check ETD metadata file '''
-            print("Checking file: " + item_path)
-            dc_tree = etree.parse(item_path)
-            print("XML is well formed.")
-
+def process_item_file(item_path,item_file,dash_titles) :
+    if item_file == 'dublin_core.xml' :
+        print("Checking file: " + item_path)
+        dc_tree = etree.parse(item_path)
+        print("XML is well formed.")
+        root = dc_tree.getroot()
+        title = extract_title(dc_tree)
+        print("Title is: '" + str(title) + "'")
+        if needle_in_haystack(title,dash_titles) :
+            print("ALERT: SIMILAR TITLE ALREADY IN DASH!")
+            #exit()
+        else :
+            print ("New title...")
+    elif item_file == 'metadata_dash.xml' :
+        ''' sanity check dash metadata file '''
+        print("Checking file: " + item_path)
+        dc_tree = etree.parse(item_path)
+        print("XML is well formed.")
+    elif item_file == 'metadata_thesis.xml' :
+        ''' sanity check ETD metadata file '''
+        print("Checking file: " + item_path)
+        dc_tree = etree.parse(item_path)
+        print("XML is well formed.")
 
 
+def process_batch_dir(path,dash_titles) :
+    batch_dir = os.listdir(path)
+    for item_dir in batch_dir :
+        if re.match("^\d+$",item_dir ) :
+            # Looks like an item dir (numeric)
+            for item_file in os.listdir(path + "/" + item_dir) : 
+                item_path =  path + "/" + item_dir + "/" + item_file
+                process_item_file(item_path,item_file,dash_titles)
+        else :
+            # Looks like batch dir (HMS, FAS_HMS, etc)
+            process_batch_dir(item_dir,dash_titles)
+
+main()
