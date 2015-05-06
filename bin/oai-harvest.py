@@ -53,10 +53,10 @@ def extractResumptionToken(responseData) :
     tree = etree.fromstring(responseData)
     resumptionToken = tree.findall('.//{http://www.openarchives.org/OAI/2.0/}resumptionToken')
     if len(resumptionToken) > 0 :
-        sys.stderr.write("Got resumptionToken: " + resumptionToken[0].text + "\n")
+        print("Got resumptionToken: " + resumptionToken[0].text + "\n")
         return resumptionToken[0].text
     else :
-        sys.stderr.write("No resumtionToken. We're done.\n")
+       print("No resumtionToken. We're done.\n")
 
 def savePage(responseData,outputDir,pageCount) :
     out_file = open(outputDir+"/page"+str(pageCount) + ".xml", "wb")
@@ -91,8 +91,8 @@ def main():
             pageCount+=1
             if resumptionToken :
                 url = baseResumptionUrl + "&resumptionToken=" + resumptionToken
-                print("Found Resumption Token. Waiting 10 seconds before next request...")
-                time.sleep(10)
+                print("Found Resumption Token. Waiting 1 second before next request...")
+                time.sleep(1)
         else :
             exit("HTTP Error! Exiting")
 
