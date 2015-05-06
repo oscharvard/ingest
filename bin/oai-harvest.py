@@ -56,7 +56,7 @@ def extractResumptionToken(responseData) :
         print("Got resumptionToken: " + resumptionToken[0].text + "\n")
         return resumptionToken[0].text
     else :
-       print("No resumtionToken. We're done.\n")
+       print("No resumptionToken. We're done.\n")
 
 def savePage(responseData,outputDir,pageCount) :
     out_file = open(outputDir+"/page"+str(pageCount) + ".xml", "wb")
