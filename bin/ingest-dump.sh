@@ -14,7 +14,7 @@ export CLASSPATH=$OSC_COMMON/lib/ojdbc14-10.2.0.2.0.jar:$OSC_COMMON/bin;
 ## dump citations
 
 java JSD $PROPS "
-select dbms_lob.substr( mdv_citation.text_value, 4000, 1 ) as citation from metadatavalue mdv_citation where mdv_citation.metadata_field_id=18
+select dbms_lob.substr( mdv_citation.text_value, 3940, 1 ) as citation from metadatavalue mdv_citation where mdv_citation.metadata_field_id=18
 "  >  $TSV/citations.tsv
 
 ## dump dois
@@ -39,6 +39,42 @@ sort -n $TSV/pmcids.tsv > $TSV/temp.tsv;
 uniq    $TSV/temp.tsv   > $TSV/pmcids.tsv;
 
 rm      $TSV/temp.tsv;
+
+
+## dump pmc ids (pubmed central) REINOS
+
+java JSD $PROPS "
+select mdv_hasversion.text_value as hasversion,mdv_hasversion.item_id  from metadatavalue mdv_hasversion where mdv_hasversion.metadata_field_id=46 and mdv_hasversion.text_value like '%PMC%'"  > $TSV/pmcid2dashid.tsv;
+
+perl -p -i -e "s#^.*PMC##"  $TSV/pmcid2dashid.tsv;
+perl -p -i -e "s#.pdf.+\t#\t#"  $TSV/pmcid2dashid.tsv;
+perl -p -i -e "s#\/\t#\t#"  $TSV/pmcid2dashid.tsv;
+
+sort -n $TSV/pmcid2dashid.tsv > $TSV/temp2.tsv;
+uniq    $TSV/temp2.tsv   > $TSV/pmcid2dashid.tsv;
+
+rm      $TSV/temp2.tsv;
+
+
+## dump external urls ("hasversion")
+
+java JSD $PROPS "
+select dbms_lob.substr( mdv_hasversion.text_value, 4000, 1 ) as hasversion from metadatavalue mdv_hasversion where mdv_hasversion.metadata_field_id=46"  > $TSV/hasversions.tsv
+
+sort -n $TSV/hasversions.tsv > $TSV/temp.tsv;
+uniq    $TSV/temp.tsv   > $TSV/hasversions.tsv;
+rm      $TSV/temp.tsv;
+
+
+## dump external ids 
+
+java JSD $PROPS "
+select dbms_lob.substr( mdv_id_other.text_value, 4000, 1 ) as id_other from metadatavalue mdv_id_other where mdv_id_other.metadata_field_id=24"  > $TSV/id-others.tsv
+
+sort -n $TSV/id-others.tsv > $TSV/temp.tsv;
+uniq    $TSV/temp.tsv   > $TSV/id-others.tsv;
+rm      $TSV/temp.tsv;
+
 
 ## dump titles
 
