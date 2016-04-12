@@ -37,6 +37,15 @@ def load_dash_titles() :
 def load_dash_pmcids():
     return tsv.read_set(OSCROOT+"/data/ingest/tsv/pmcids.tsv")
 
+def load_dash_hasversions():
+    return tsv.read_set(OSCROOT+"/data/ingest/tsv/hasversions.tsv")
+
+def load_dash_id_others():
+    return tsv.read_set(OSCROOT+"/data/ingest/tsv/id-others.tsv")
+
+def load_dash2ldap_school():
+    return tsv.read_map(OSCROOT+"/data/schools/dash2ldap.tsv")
+
 # Methods for munging data
 
 def orval(dictionary,key,value) :
@@ -52,6 +61,19 @@ def esc(string) :
         return ""
 
 # Methods for matching and filtering 
+
+
+def findit(pattern,string) :
+    m = re.search(pattern,string)
+    if m :
+        return m.group(1).strip()
+    return None
+
+def findem(pattern,string) :
+    results = []
+    for m in re.finditer(pattern,string) :
+        results.append(m.group(1).strip())
+    return results
 
 def serial_search(patterns,string,notfound) :
     for pattern in patterns :
@@ -158,11 +180,7 @@ def write_dash_meta(article,article_dir) :
     f.write('<dublin_core schema="dash">'+"\n")
     f.write('<dcvalue element="license" qualifier="none">' + article['license'] + '</dcvalue>'+ "\n")
     if 'harvard_authors' in article and len(article['harvard_authors']):
-        for author in article['harvard_authors'] :
-            last = esc(author['last'])
-            first = esc(author['first'])
-            break
-        f.write('<dcvalue element="depositing" qualifier="author">' + last + ', ' + first + '</dcvalue>' + "\n")
+        write_dc_authors(f,article,'harvard_authors','depositing','author')
     if 'dash.affiliation.other' in article:
         for other in article['dash.affiliation.other'] :
             f.write('<dcvalue element="affiliation" qualifier="other" language="en_US">' + other + '</dcvalue>' + "\n")
@@ -175,10 +193,15 @@ def write_dash_meta(article,article_dir) :
 
 
 def author_string(author) :
-    return esc(author['last']) + ', ' + esc(advisor['first'])
+    if 'first' in author and author['first'] != None :
+        return esc(author['last']) + ', ' + esc(author['first'])
+    else :
+        return esc(author['last'])
 
-def dc_value(element,qualifier,value,language) :
+def dc_value(element,qualifier,value,language,authority=None) :
     sb = '<dcvalue element="' + element + '" qualifier="' + qualifier + '"'
+    if authority :
+        sb += ' authority="' + authority + '" '
     if language :
         sb += ' language="en"'
     sb += ('>' + value + '</dcvalue>'+"\n")
@@ -189,7 +212,13 @@ def write_dc_authors(f,article,key,element,qualifier) :
     if key in article :
         authors = article[key]
         for author in authors :
-            f.write(dc_value(element,qualifier, esc(author['last']) + ', ' + esc(author['first']),None))
+            authority = None
+            if 'authority' in author :
+                authority= author['authority']
+            f.write(dc_value(element,qualifier, author_string(author),None,authority))
+            if element == 'depositing' :
+                # we just need one depositing author.
+                return
 
 def write_dublin_core_meta(article,article_dir,batch) :
     path = article_dir + "/dublin_core.xml"
@@ -235,12 +264,15 @@ def write_dublin_core_meta(article,article_dir,batch) :
         f.write('<dcvalue element="relation" qualifier="journal" language="en">' + esc(article['journal']) + '</dcvalue>' + "\n")
         if not 'type' in article :
             article['type'] = 'Journal Article'
+    if 'version' in article :
+        f.write('<dcvalue element="description" qualifier="version" language="en">' + esc(article['version']) + '</dcvalue>' + "\n")
     f.write('<dcvalue element="type" qualifier="none" language="en_US">' + article['type'] +'</dcvalue>' + "\n")
 
     timestamp = strftime("%Y-%m-%dT%H:%M:%SZ")
     #'pubmed_3'
 
-    f.write('<dcvalue element="description" qualifier="provenance" language="en">Batch uploaded (batch: ' + batch + ') by Reinhard Engels (reinhard_engels@harvard.edu) on ' + timestamp + '</dcvalue>' +"\n")
+    #f.write('<dcvalue element="description" qualifier="provenance" language="en">Batch uploaded (batch: ' + batch + ') by Reinhard Engels (reinhard_engels@harvard.edu) on ' + timestamp + '</dcvalue>' +"\n")
+    f.write('<dcvalue element="description" qualifier="provenance" language="en">Batch uploaded (batch: ' + batch + ') by Ben Steinberg (benjamin_steinberg@harvard.edu) on ' + timestamp + '</dcvalue>' +"\n")
     f.write('</dublin_core>'+"\n")
     f.close()
 
