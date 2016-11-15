@@ -3,12 +3,9 @@
 import argparse
 from http.client import HTTPConnection
 import http.cookiejar
-import re
-import sys
 from time import sleep
 import urllib.request
-from urllib.parse import urlparse
-from urllib.parse import parse_qsl
+from urllib.parse import urlparse, parse_qsl
 
 try:
     from lxml import etree
@@ -46,7 +43,7 @@ def extractBaseResumptionUrl(initialUrl):
             url += key + "=" + value
     return url
 
-def extractResumptionToken(responseData) :
+def extractResumptionToken(responseData):
     tree = etree.fromstring(responseData)
     resumptionToken = tree.findall('.//{http://www.openarchives.org/OAI/2.0/}resumptionToken')
     if len(resumptionToken) > 0 :
@@ -55,12 +52,12 @@ def extractResumptionToken(responseData) :
     else :
        print("No resumptionToken. We're done.\n")
 
-def savePage(responseData,outputDir,pageCount) :
+def savePage(responseData,outputDir,pageCount):
     out_file = open(outputDir+"/page"+str(pageCount) + ".xml", "wb")
     out_file.write(responseData)
     out_file.close()
 
-def getArgs() :
+def getArgs():
     parser = argparse.ArgumentParser(description='Script to fetch OAI-PMH url and all resumptionToken pages and save to specified directory for futher processing.')
     parser.add_argument('-d','--dir', help='Download directory for this run', required=True)
     parser.add_argument('-u','--url', help='OAI PMH url.', required=True)
@@ -79,25 +76,25 @@ def main():
     print("url: " + url + "\nbaseResumptionUrl: " + baseResumptionUrl)
     resumptionToken = args['resumptiontoken']
 
-    while resumptionToken :
+    while resumptionToken:
         print("Opening url: " + url)
 
         retries = 5
-        for tries in range(retries):
+        for tries in range(1, retries + 1):
             try:
                 response = opener.open(url)
                 break
             except urllib.error.HTTPError as e:
                 print("Encountered exception: {}".format(e))
-                raise e if tries == retries - 1 else ...
+                raise e if tries == retries else ...
                 sleep(tries * 3)
 
-        if response.status == 200 :
+        if response.status == 200:
             responseData = response.read()
             resumptionToken = extractResumptionToken(responseData)
             savePage(responseData,outputDir,pageCount)
             pageCount+=1
-            if resumptionToken :
+            if resumptionToken:
                 url = baseResumptionUrl + "&resumptionToken=" + resumptionToken
                 print("Found Resumption Token. Waiting 1 second before next request...")
                 sleep(1)
