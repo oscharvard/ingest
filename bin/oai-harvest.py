@@ -86,7 +86,8 @@ def main():
                 break
             except urllib.error.HTTPError as e:
                 print("Encountered exception: {}".format(e))
-                raise e if tries == retries else ...
+                if tries == retries:
+                    raise e
                 sleep(tries * 3)
 
         if response.status == 200:
