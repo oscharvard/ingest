@@ -18,10 +18,10 @@ except ImportError:
 # Reinhard: march 2012
 # Tweaked for bayes October 2012
 
-# written for pubmed, 
+# written for pubmed,
 # but should be provider agnostic -- work with any OAI-PMH provider.
 # just download the files, following resumptionTokens for further analysis.
-# 
+#
 
 # usage:
 # export OSCROOT=/home/osc;
@@ -33,7 +33,7 @@ except ImportError:
 # maybe another script that calls this one could handle those bits to keep this one generic and flexible.
 
 def createOpener():
-    HTTPConnection.debuglevel = 10 
+    HTTPConnection.debuglevel = 10
     cj = http.cookiejar.CookieJar()
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
     return opener
@@ -67,6 +67,7 @@ def getArgs() :
     parser = argparse.ArgumentParser(description='Script to fetch OAI-PMH url and all resumptionToken pages and save to specified directory for futher processing.')
     parser.add_argument('-d','--dir', help='Download directory for this run', required=True)
     parser.add_argument('-u','--url', help='OAI PMH url.', required=True)
+    parser.add_argument('-r','--resumptiontoken', help='Resumption token - in case of failure, break glass', required=False, default="Initial Request")
     return vars(parser.parse_args())
 
 def main():
@@ -75,11 +76,11 @@ def main():
     args = getArgs()
     outputDir = args['dir']
     initialUrl = args['url']
-    baseResumptionUrl = extractBaseResumptionUrl(initialUrl) 
+    baseResumptionUrl = extractBaseResumptionUrl(initialUrl)
     url = initialUrl
     pageCount=1
     print("url: " + url + "\nbaseResumptionUrl: " + baseResumptionUrl)
-    resumptionToken = "Initial Request"
+    resumptionToken = args['resumptiontoken']
 
     while resumptionToken :
         print("Opening url: " + url)
@@ -97,4 +98,3 @@ def main():
             exit("HTTP Error! Exiting")
 
 main()
- 
