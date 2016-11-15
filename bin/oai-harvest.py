@@ -5,7 +5,7 @@ from http.client import HTTPConnection
 import http.cookiejar
 import re
 import sys
-import time
+from time import sleep
 import urllib.request
 from urllib.parse import urlparse
 from urllib.parse import parse_qsl
@@ -14,9 +14,6 @@ try:
     from lxml import etree
 except ImportError:
     import xml.etree.ElementTree as etree
-
-# Reinhard: march 2012
-# Tweaked for bayes October 2012
 
 # written for pubmed,
 # but should be provider agnostic -- work with any OAI-PMH provider.
@@ -84,7 +81,17 @@ def main():
 
     while resumptionToken :
         print("Opening url: " + url)
-        response = opener.open(url)
+
+        retries = 5
+        for tries in range(retries):
+            try:
+                response = opener.open(url)
+                break
+            except urllib.error.HTTPError as e:
+                print("Encountered exception: {}".format(e))
+                raise e if tries == retries - 1 else ...
+                sleep(tries * 3)
+
         if response.status == 200 :
             responseData = response.read()
             resumptionToken = extractResumptionToken(responseData)
@@ -93,8 +100,8 @@ def main():
             if resumptionToken :
                 url = baseResumptionUrl + "&resumptionToken=" + resumptionToken
                 print("Found Resumption Token. Waiting 1 second before next request...")
-                time.sleep(1)
-        else :
+                sleep(1)
+        else:
             exit("HTTP Error! Exiting")
 
 main()
