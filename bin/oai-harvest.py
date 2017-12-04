@@ -1,11 +1,10 @@
 #!/bin/env python3
 
 import argparse
-from http.client import HTTPConnection
-import http.cookiejar
 from time import sleep
-import urllib.request
 from urllib.parse import urlparse, parse_qsl
+from requests import Session
+from requests.exceptions import RequestException
 
 try:
     from lxml import etree
@@ -26,21 +25,13 @@ except ImportError:
 # todo: should automatically figure out last day of month for "until" parameter.
 # maybe another script that calls this one could handle those bits to keep this one generic and flexible.
 
-def createOpener():
-    HTTPConnection.debuglevel = 10
-    cj = http.cookiejar.CookieJar()
-    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
-    return opener
-
 def extractBaseResumptionUrl(initialUrl):
-    urlObject =urlparse(initialUrl)
-    queryStringKeyValues = parse_qsl(urlObject.query)
+    urlObject = urlparse(initialUrl)
     url = urlObject.scheme + '://' + urlObject.netloc + urlObject.path + '?'
-    for keyvalue in queryStringKeyValues :
-        key = keyvalue[0]
-        value = keyvalue[1]
+
+    for key, value in parse_qsl(urlObject.query):
         if key.lower() == 'verb' :
-            url += key + "=" + value
+            url += "{}={}".format(key, value)
     return url
 
 def extractResumptionToken(responseData):
@@ -52,10 +43,9 @@ def extractResumptionToken(responseData):
     else :
        print("No resumptionToken. We're done.\n")
 
-def savePage(responseData,outputDir,pageCount):
-    out_file = open(outputDir+"/page"+str(pageCount) + ".xml", "wb")
-    out_file.write(responseData)
-    out_file.close()
+def savePage(responseData, outputDir, pageCount):
+    with open("{}/page{}.xml".format(outputDir, pageCount), "wb") as out_file:
+        out_file.write(responseData)
 
 def getArgs():
     parser = argparse.ArgumentParser(description='Script to fetch OAI-PMH url and all resumptionToken pages and save to specified directory for futher processing.')
@@ -64,42 +54,43 @@ def getArgs():
     parser.add_argument('-r','--resumptiontoken', help='Resumption token - in case of failure, break glass', required=False, default="Initial Request")
     return vars(parser.parse_args())
 
+def get_url(
+
 def main():
+    with Session() as s:
+        args = getArgs()
+        outputDir = args['dir']
+        initialUrl = args['url']
+        baseResumptionUrl = extractBaseResumptionUrl(initialUrl)
+        url = initialUrl
+        pageCount=1
+        print("url: " + url + "\nbaseResumptionUrl: " + baseResumptionUrl)
+        resumptionToken = args['resumptiontoken']
 
-    opener = createOpener()
-    args = getArgs()
-    outputDir = args['dir']
-    initialUrl = args['url']
-    baseResumptionUrl = extractBaseResumptionUrl(initialUrl)
-    url = initialUrl
-    pageCount=1
-    print("url: " + url + "\nbaseResumptionUrl: " + baseResumptionUrl)
-    resumptionToken = args['resumptiontoken']
+        while resumptionToken:
+            print("Opening url: " + url)
 
-    while resumptionToken:
-        print("Opening url: " + url)
+            retries = 5
+            for tries in range(1, retries + 1):
+                try:
+                    response = s.get(url)
+                    break
+                except RequestException as e:
+                    print("Encountered exception: {}".format(e))
+                    if tries == retries:
+                        raise e
+                    sleep(tries * 3)
 
-        retries = 5
-        for tries in range(1, retries + 1):
-            try:
-                response = opener.open(url)
-                break
-            except urllib.error.HTTPError as e:
-                print("Encountered exception: {}".format(e))
-                if tries == retries:
-                    raise e
-                sleep(tries * 3)
-
-        if response.status == 200:
-            responseData = response.read()
-            resumptionToken = extractResumptionToken(responseData)
-            savePage(responseData,outputDir,pageCount)
-            pageCount+=1
-            if resumptionToken:
-                url = baseResumptionUrl + "&resumptionToken=" + resumptionToken
-                print("Found Resumption Token. Waiting 1 second before next request...")
-                sleep(1)
-        else:
-            exit("HTTP Error! Exiting")
+            if response.status == 200:
+                responseData = response.text
+                resumptionToken = extractResumptionToken(responseData)
+                savePage(responseData,outputDir,pageCount)
+                pageCount+=1
+                if resumptionToken:
+                    url = baseResumptionUrl + "&resumptionToken=" + resumptionToken
+                    print("Found Resumption Token. Waiting 1 second before next request...")
+                    sleep(1)
+            else:
+                exit("HTTP Error! Exiting")
 
 main()
