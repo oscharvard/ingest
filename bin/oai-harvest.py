@@ -54,8 +54,6 @@ def getArgs():
     parser.add_argument('-r','--resumptiontoken', help='Resumption token - in case of failure, break glass', required=False, default="Initial Request")
     return vars(parser.parse_args())
 
-def get_url(
-
 def main():
     with Session() as s:
         args = getArgs()
@@ -81,8 +79,8 @@ def main():
                         raise e
                     sleep(tries * 3)
 
-            if response.status == 200:
-                responseData = response.text
+            if response.status_code == 200:
+                responseData = response.content
                 resumptionToken = extractResumptionToken(responseData)
                 savePage(responseData,outputDir,pageCount)
                 pageCount+=1
