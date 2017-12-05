@@ -71,7 +71,7 @@ def main():
             retries = 5
             for tries in range(1, retries + 1):
                 try:
-                    response = s.get(url)
+                    response = s.get(url, timeout=15.0)
                     break
                 except RequestException as e:
                     print("Encountered exception: {}".format(e))
